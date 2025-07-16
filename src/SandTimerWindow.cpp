@@ -48,6 +48,14 @@ void SandTimerWindow::startCountdown(int seconds) {
     remainingSeconds = seconds;
     updateCountdown();
     timer->start(1000);
+
+    QRect screenGeometry = QGuiApplication::primaryScreen()->availableGeometry();
+
+    //  右侧中间位置
+    int x = screenGeometry.right() - width() - 10;  // 靠右边，留 10px 边距
+    int y = screenGeometry.height() / 2 - height() / 2;
+
+    move(x, y);  // 设置窗口位置
     show();
 }
 
