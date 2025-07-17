@@ -2,12 +2,20 @@
 #include <QFont>
 #include <QPalette>
 
-SandTimerWindow::SandTimerWindow(QWidget* parent)
+SandTimerWindow::SandTimerWindow(const QString& labelName, QWidget* parent)
     : QWidget(parent), remainingSeconds(0)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
-    setFixedSize(150, 80);
+    setFixedSize(150, 90);
+
+    // nameLabel: 事件名称
+    nameLabel = new QLabel(labelName, this);
+    QFont nameFont;
+    nameFont.setPointSize(10);
+    nameLabel->setFont(nameFont);
+    nameLabel->setAlignment(Qt::AlignCenter);
+    nameLabel->setStyleSheet("color: gray;");
 
     timeLabel = new QLabel("00:00", this);
     QFont font;
@@ -15,29 +23,27 @@ SandTimerWindow::SandTimerWindow(QWidget* parent)
     font.setBold(true);
     timeLabel->setFont(font);
     timeLabel->setAlignment(Qt::AlignCenter);
+    timeLabel->setStyleSheet("color: black; font: bold 24px;");
 
     QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->addWidget(timeLabel);
-    layout->setContentsMargins(10, 10, 10, 10);
+    layout->addWidget(nameLabel);     // 先放事件名
+    layout->addWidget(timeLabel);     // 再放倒计时
+    layout->setContentsMargins(10, 8, 10, 10);
+    layout->setSpacing(1);
     setLayout(layout);
 
     audioOutput = new QAudioOutput(this);
     player = new QMediaPlayer(this);
     player->setAudioOutput(audioOutput);
-
     // 设置音量（0.0~1.0）
     audioOutput->setVolume(0.8);
-
     // 设置音频文件路径
     player->setSource(QUrl::fromLocalFile("D:/chen_education/project/Aproject/sandtimer/assets/alarm.wav"));
 
 
+    // 计时器
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &SandTimerWindow::updateCountdown);
-    contextMenu = new QMenu(this);
-    QAction* closeAction = new QAction("关闭计时器", this);
-    connect(closeAction, &QAction::triggered, this, &QWidget::close);
-    contextMenu->addAction(closeAction);
 }
 void SandTimerWindow::contextMenuEvent(QContextMenuEvent* event)
 {
@@ -74,13 +80,8 @@ void SandTimerWindow::updateCountdown() {
         .arg(minutes, 2, 10, QChar('0'))
         .arg(seconds, 2, 10, QChar('0'));
 
-    // 如果是负时间，加上负号并变颜色
-    if (remainingSeconds < 0) {
+    if (remainingSeconds < 0)
         timeStr = "-" + timeStr;
-        timeLabel->setStyleSheet("color: red; font: bold 24px;");
-    } else {
-        timeLabel->setStyleSheet("color: black; font: bold 24px;");
-    }
 
     timeLabel->setText(timeStr);
 

@@ -8,13 +8,13 @@
 #include <QMenu>
 #include <QMediaPlayer>
 #include <QAudioOutput>
-
+#include <QString>
 
 class SandTimerWindow : public QWidget {
     Q_OBJECT
 
 public:
-    explicit SandTimerWindow(QWidget* parent = nullptr);
+    explicit SandTimerWindow(const QString& labelName, QWidget* parent = nullptr);
     void startCountdown(int seconds);
 
 protected:
@@ -26,6 +26,7 @@ private slots:
     void updateCountdown();
 
 private:
+    QLabel* nameLabel;
     QLabel* timeLabel;
     QTimer* timer;
     int remainingSeconds;

@@ -1,12 +1,15 @@
 #pragma once
+
 #include <QObject>
-#include <QLocalServer>
-#include <QLocalSocket>
-#include "SandTimerManager.h"
-#include <QJsonDocument>
+#include <QTcpServer>
+#include <QTcpSocket>
+#include "SocketServer.h"
+#include <QDebug>
+#include <QJsonDocument> 
 #include <QJsonObject>
 #include <QJsonParseError>
-
+#include "SandTimerWindow.h"
+#include "SandTimerManager.h"
 
 class SocketServer : public QObject {
     Q_OBJECT
@@ -15,11 +18,10 @@ public:
     explicit SocketServer(QObject *parent = nullptr);
     ~SocketServer();
 
-private slots:
-    void onNewConnection();
-    void onClientDataReceived(QLocalSocket* clientConnection);
-
 private:
-    QLocalServer *server;
-    SandTimerManager* manager;  // 管理计时器的类实例
+    QTcpServer *server;
+    SandTimerManager *manager;
+
+    void onNewConnection();
+    void onClientDataReceived(QTcpSocket *clientConnection);
 };

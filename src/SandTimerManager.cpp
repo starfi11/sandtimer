@@ -11,7 +11,7 @@ void SandTimerManager::startTimer(const QString& label, int seconds) {
     }
 
     // 创建新窗口
-    SandTimerWindow* window = new SandTimerWindow();
+    SandTimerWindow* window = new SandTimerWindow(label);
     window->setAttribute(Qt::WA_DeleteOnClose);
     window->startCountdown(seconds);
     window->show();
