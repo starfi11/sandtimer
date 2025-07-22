@@ -11,9 +11,11 @@
 #include <QString>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPropertyAnimation>
 
 class SandTimerWindow : public QWidget {
     Q_OBJECT
+    Q_PROPERTY(QColor backgroundColor READ getBackgroundColor WRITE setBackgroundColor)
 
 public:
     explicit SandTimerWindow(const QString& labelName, QWidget* parent = nullptr);
@@ -37,5 +39,12 @@ private:
     QMenu* contextMenu;
     QMediaPlayer* player;
     QAudioOutput* audioOutput; 
+
+    // ✅ 动态背景动画相关
+    QColor backgroundColor;
+    QPropertyAnimation* bgAnimation = nullptr;
+
+    QColor getBackgroundColor() const;
+    void setBackgroundColor(const QColor& color);
     
 };

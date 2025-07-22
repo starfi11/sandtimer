@@ -2,9 +2,19 @@
 #include <QFont>
 #include <QPalette>
 
+QColor SandTimerWindow::getBackgroundColor() const {
+    return backgroundColor;
+}
+
+void SandTimerWindow::setBackgroundColor(const QColor& color) {
+    backgroundColor = color;
+    update();
+}
+
 SandTimerWindow::SandTimerWindow(const QString& labelName, QWidget* parent)
     : QWidget(parent), remainingSeconds(0)
 {
+    backgroundColor = QColor(255, 255, 255, 230);  // 初始为白色背景
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedSize(150, 90);
@@ -76,10 +86,27 @@ void SandTimerWindow::startCountdown(const QString& labelName, int seconds) {
 }
 
 void SandTimerWindow::updateCountdown() {
-    // 播放音频（只在刚好为0秒时触发一次）
+    // 播放音频（只在刚好为0秒时触发一次）并使用动画颜色渐变背景
     if (remainingSeconds == 0) {
-        player->play();
+    player->play();
+
+    // 创建背景渐变动画
+    if (bgAnimation) {
+        bgAnimation->stop();
+        delete bgAnimation;
     }
+
+    bgAnimation = new QPropertyAnimation(this, "backgroundColor");
+    bgAnimation->setDuration(1500);  // 1.5秒
+    bgAnimation->setLoopCount(4);    // 次数
+
+    bgAnimation->setStartValue(QColor(255, 255, 255, 230));         // 起始白色
+    bgAnimation->setKeyValueAt(0.5, QColor(144, 238, 144, 255));    // 中间绿色（light green）
+    bgAnimation->setEndValue(QColor(255, 255, 255, 230));           // 回到白色
+
+    bgAnimation->start(QAbstractAnimation::DeleteWhenStopped);  // 播完自动释放
+}
+
 
     // 计算绝对时间
     int absSeconds = std::abs(remainingSeconds);
@@ -118,8 +145,8 @@ void SandTimerWindow::paintEvent(QPaintEvent*) {
     QPainterPath path;
     path.addRoundedRect(rect, 15, 15);  // 圆角 15px
 
-    // 背景
-    painter.fillPath(path, QColor(255, 255, 255, 230));  // 半透明白背景
+    // 使用动画背景色
+    painter.fillPath(path, backgroundColor);
 
     // 边框
     QPen pen(QColor(100, 100, 100, 160)); // 灰色边框
