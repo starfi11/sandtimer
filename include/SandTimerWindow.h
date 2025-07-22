@@ -9,18 +9,21 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QString>
+#include <QPainter>
+#include <QPainterPath>
 
 class SandTimerWindow : public QWidget {
     Q_OBJECT
 
 public:
     explicit SandTimerWindow(const QString& labelName, QWidget* parent = nullptr);
-    void startCountdown(int seconds);
+    void startCountdown(const QString& labelName, int seconds);
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 private slots:
     void updateCountdown();
@@ -33,6 +36,6 @@ private:
     QPoint dragPosition;
     QMenu* contextMenu;
     QMediaPlayer* player;
-    QAudioOutput* audioOutput;
+    QAudioOutput* audioOutput; 
     
 };

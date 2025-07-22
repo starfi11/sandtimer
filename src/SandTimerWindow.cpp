@@ -10,9 +10,9 @@ SandTimerWindow::SandTimerWindow(const QString& labelName, QWidget* parent)
     setFixedSize(150, 90);
 
     // nameLabel: 事件名称
-    nameLabel = new QLabel(labelName, this);
+    nameLabel = new QLabel(this);
     QFont nameFont;
-    nameFont.setPointSize(10);
+    nameFont.setPointSize(12);
     nameLabel->setFont(nameFont);
     nameLabel->setAlignment(Qt::AlignCenter);
     nameLabel->setStyleSheet("color: gray;");
@@ -50,8 +50,18 @@ void SandTimerWindow::contextMenuEvent(QContextMenuEvent* event)
     if (contextMenu)
         contextMenu->exec(event->globalPos());
 }
-void SandTimerWindow::startCountdown(int seconds) {
+void SandTimerWindow::startCountdown(const QString& labelName, int seconds) {
     remainingSeconds = seconds;
+
+    // 显示时间
+    // 设置 nameLabel 的显示文本为：原名 + 总时间
+    int minutes = seconds / 60;
+    int secs = seconds % 60;
+    QString timeStr = QString("%1:%2")
+        .arg(minutes, 2, 10, QChar('0'))
+        .arg(secs, 2, 10, QChar('0'));
+    nameLabel->setText(labelName  + " " + timeStr);
+
     updateCountdown();
     timer->start(1000);
 
@@ -100,3 +110,20 @@ void SandTimerWindow::mouseMoveEvent(QMouseEvent* event) {
         move(event->globalPosition().toPoint() - dragPosition);
 }
 
+void SandTimerWindow::paintEvent(QPaintEvent*) {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    QRectF rect = this->rect();
+    QPainterPath path;
+    path.addRoundedRect(rect, 15, 15);  // 圆角 15px
+
+    // 背景
+    painter.fillPath(path, QColor(255, 255, 255, 230));  // 半透明白背景
+
+    // 边框
+    QPen pen(QColor(100, 100, 100, 160)); // 灰色边框
+    pen.setWidth(2);
+    painter.setPen(pen);
+    painter.drawPath(path);
+}

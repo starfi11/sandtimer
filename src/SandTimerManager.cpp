@@ -13,7 +13,7 @@ void SandTimerManager::startTimer(const QString& label, int seconds) {
     // 创建新窗口
     SandTimerWindow* window = new SandTimerWindow(label);
     window->setAttribute(Qt::WA_DeleteOnClose);
-    window->startCountdown(seconds);
+    window->startCountdown(label,seconds);
     window->show();
 
     connect(window, &QObject::destroyed, this, &SandTimerManager::handleTimerClosed);
@@ -28,7 +28,7 @@ void SandTimerManager::resetTimer(const QString& label) {
 
     int seconds = timerMap[label].initialSeconds;
     SandTimerWindow* window = timerMap[label].window;
-    window->startCountdown(seconds);
+    window->startCountdown(label,seconds);
 }
 
 void SandTimerManager::cancelTimer(const QString& label) {
