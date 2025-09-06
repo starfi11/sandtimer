@@ -55,11 +55,11 @@ SandTimerWindow::SandTimerWindow(const QString& labelName, QWidget* parent)
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &SandTimerWindow::updateCountdown);
 }
-void SandTimerWindow::contextMenuEvent(QContextMenuEvent* event)
-{
-    if (contextMenu)
-        contextMenu->exec(event->globalPos());
-}
+// void SandTimerWindow::contextMenuEvent(QContextMenuEvent* event)
+// {
+//     if (contextMenu)
+//         contextMenu->exec(event->globalPos());
+// }
 void SandTimerWindow::startCountdown(const QString& labelName, int seconds) {
     remainingSeconds = seconds;
 
