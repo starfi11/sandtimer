@@ -6,9 +6,6 @@ on:
       - "v*.*.*"
   workflow_dispatch: {}
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: windows-latest
@@ -20,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 安装 Qt 6（仅所需模块，启用缓存）
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
@@ -29,31 +27,32 @@ jobs:
           cache: true
           modules: 'qtmultimedia'
 
+      # 配置与构建（Release）
       - name: Configure (CMake)
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (CMake)
         run: cmake --build build --config Release --parallel
 
-      # 用 windeployqt 收集到 OUT_DIR
+      # ✅ 用 windeployqt 一次性收集所有 Qt 运行时到 out/
       - name: Deploy Qt runtime (windeployqt)
         shell: pwsh
         run: |
-          $exePath = Resolve-Path "build/Release/${env:EXE_NAME}"
           if (Test-Path $env:OUT_DIR) { Remove-Item -Recurse -Force $env:OUT_DIR }
           New-Item -ItemType Directory -Path $env:OUT_DIR | Out-Null
-          & windeployqt `
-            --release `
-            --no-translations `
-            --compiler-runtime `
-            --multimedia `
-            --dir "$env:OUT_DIR" `
-            $exePath
-          # ！！把 EXE 本体拷到 OUT_DIR
+
+          $exePath = Resolve-Path "build/Release/${env:EXE_NAME}"
+
+          # 部署 Qt 运行时到 out/ 目录
+          # --compiler-runtime: 带上 MSVC 运行库
+          # --no-translations: 如无多语言需求可关闭（按需去掉）
+          & windeployqt --release --compiler-runtime --no-translations --dir "$env:OUT_DIR" $exePath
+
+          # 拷贝 exe 本体
           Copy-Item $exePath "$env:OUT_DIR/"
 
-      # 补充资源与许可证
-      - name: Copy assets & licenses
+      # ✅ 只补充你的资源与许可证（不再手选 DLL/插件）
+      - name: Add assets & licenses
         shell: pwsh
         run: |
           if (Test-Path "assets") {
@@ -64,13 +63,14 @@ jobs:
             Copy-Item "third_party_notices" "$env:OUT_DIR/third_party_notices" -Recurse -Force
           }
 
-      # 列出 OUT_DIR 内容（便于排查）
-      - name: List OUT_DIR
+      # 基本自检（从 out/ 下检查）
+      - name: Sanity check
         shell: pwsh
         run: |
-          Write-Host "=== OUT_DIR tree ==="
-          Get-ChildItem "$env:OUT_DIR" -Recurse | Select FullName,Length | Format-Table -AutoSize
+          if (-not (Test-Path "$env:OUT_DIR/${env:EXE_NAME}")) { throw "exe missing" }
+          if (-not (Test-Path "$env:OUT_DIR/platforms/qwindows.dll")) { throw "platform plugin missing" }
 
+      # 打包 zip（命名含 tag）
       - name: Package zip
         shell: pwsh
         run: |
@@ -80,6 +80,7 @@ jobs:
           Compress-Archive -Path "$env:OUT_DIR\*" -DestinationPath $zip -Force
           echo "ASSET_NAME=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # 发布 Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
