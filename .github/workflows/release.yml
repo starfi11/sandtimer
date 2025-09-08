@@ -70,15 +70,34 @@ jobs:
         run: |
           Write-Host "=== OUT_DIR tree ==="
           Get-ChildItem "$env:OUT_DIR" -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+          Write-Host "=== audio/ and multimedia/ ==="
+          if (Test-Path "$env:OUT_DIR/audio") { Get-ChildItem "$env:OUT_DIR/audio" | Format-Table -AutoSize }
+          if (Test-Path "$env:OUT_DIR/multimedia") { Get-ChildItem "$env:OUT_DIR/multimedia" | Format-Table -AutoSize }
 
-      # 基本自检
+      # 基本自检（宽松判断：存在其一即可）
       - name: Sanity check
         shell: pwsh
         run: |
-          if (-not (Test-Path "$env:OUT_DIR/${env:EXE_NAME}")) { throw "exe missing" }
-          if (-not (Test-Path "$env:OUT_DIR/platforms/qwindows.dll")) { throw "platform plugin missing" }
-          if (-not (Test-Path "$env:OUT_DIR/audio/qaudio_wasapi.dll")) { throw "audio plugin missing" }
-          if (-not (Test-Path "$env:OUT_DIR/multimedia/ffmpegmediaplugin.dll")) { throw "multimedia plugin missing" }
+          $exe = Join-Path $env:OUT_DIR $env:EXE_NAME
+          if (-not (Test-Path $exe)) { throw "exe missing: $exe" }
+
+          $platformOk = Test-Path (Join-Path $env:OUT_DIR "platforms/qwindows.dll")
+          if (-not $platformOk) { throw "platform plugin missing: platforms/qwindows.dll" }
+
+          # Qt 6 常见音频后端：qtaudio_wasapi.dll（注意是 qtaudio_ 前缀）
+          $audioOk = Test-Path (Join-Path $env:OUT_DIR "audio/qtaudio_wasapi.dll")
+          if (-not $audioOk) {
+            # 个别打包/版本可能叫法不同，这里兜底再查一次（历史上有人写成 qaudio_wasapi.dll）
+            $audioOk = Test-Path (Join-Path $env:OUT_DIR "audio/qaudio_wasapi.dll")
+          }
+          if (-not $audioOk) { throw "audio plugin missing (expected one of: audio/qtaudio_wasapi.dll, audio/qaudio_wasapi.dll)" }
+
+          # 多媒体后端：ffmpeg 或 Windows Media Foundation，存在其一即可
+          $ffmpeg = Test-Path (Join-Path $env:OUT_DIR "multimedia/ffmpegmediaplugin.dll")
+          $wmf    = Test-Path (Join-Path $env:OUT_DIR "multimedia/windowsmediaplugin.dll")
+          if (-not ($ffmpeg -or $wmf)) {
+            throw "multimedia plugin missing (expected one of: multimedia/ffmpegmediaplugin.dll, multimedia/windowsmediaplugin.dll)"
+          }
 
       - name: Package zip
         shell: pwsh
