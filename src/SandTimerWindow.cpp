@@ -48,7 +48,7 @@ SandTimerWindow::SandTimerWindow(const QString& labelName, QWidget* parent)
     // 设置音量（0.0~1.0）
     audioOutput->setVolume(0.8);
     // 设置音频文件路径
-    player->setSource(QUrl::fromLocalFile("D:/chen_education/project/Aproject/sandtimer/assets/alarm.wav"));
+    player->setSource(QUrl::fromLocalFile(QCoreApplication::applicationDirPath() + "/assets/alarm.wav"));
 
 
     // 计时器

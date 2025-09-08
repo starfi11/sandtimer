@@ -1,0 +1,112 @@
+name: Build & Release (sandtimer)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      EXE_NAME: SandGlassTimer.exe
+      OUT_DIR: out
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 安装 Qt 6（仅所需模块，启用缓存）
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.6.3'
+          host: 'windows'
+          arch: 'win64_msvc2019_64'
+          cache: true
+          modules: 'qtbase qtmultimedia'
+
+      # 配置与构建（Release）
+      - name: Configure (CMake)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (CMake)
+        run: cmake --build build --config Release --parallel
+
+      # 用 windeployqt 收集 Qt 运行时到 exe 同目录
+      - name: Deploy Qt runtime (windeployqt)
+        shell: pwsh
+        run: |
+          $exePath = Resolve-Path "build/Release/${env:EXE_NAME}"
+          & windeployqt --release $exePath
+
+      # 组装发行目录（精简 + 复制必要资源与许可证）
+      - name: Assemble runtime
+        shell: pwsh
+        run: |
+          $exeDir = Resolve-Path "build/Release"
+          if (Test-Path $env:OUT_DIR) { Remove-Item -Recurse -Force $env:OUT_DIR }
+          New-Item -ItemType Directory -Path $env:OUT_DIR | Out-Null
+
+          # 主程序
+          Copy-Item "$exeDir/${env:EXE_NAME}" "$env:OUT_DIR/"
+
+          # Qt 平台插件
+          if (Test-Path "$exeDir/platforms/qwindows.dll") {
+            New-Item -ItemType Directory -Path "$env:OUT_DIR/platforms" | Out-Null
+            Copy-Item "$exeDir/platforms/qwindows.dll" "$env:OUT_DIR/platforms/"
+          }
+
+          # Qt 常用图像格式插件（按需保留）
+          if (Test-Path "$exeDir/imageformats") {
+            New-Item -ItemType Directory -Path "$env:OUT_DIR/imageformats" | Out-Null
+            Copy-Item "$exeDir/imageformats/qico.dll"  "$env:OUT_DIR/imageformats/" -ErrorAction SilentlyContinue
+            Copy-Item "$exeDir/imageformats/qjpeg.dll" "$env:OUT_DIR/imageformats/" -ErrorAction SilentlyContinue
+            Copy-Item "$exeDir/imageformats/qpng.dll"  "$env:OUT_DIR/imageformats/" -ErrorAction SilentlyContinue
+          }
+
+          # 核心 Qt6 DLL（windeployqt 已复制到 exeDir；按需精简）
+          $keep = @("Qt6Core.dll","Qt6Gui.dll","Qt6Widgets.dll","Qt6Multimedia.dll")
+          foreach ($dll in $keep) {
+            if (Test-Path "$exeDir/$dll") { Copy-Item "$exeDir/$dll" "$env:OUT_DIR/" }
+          }
+
+          # 资源文件（你的项目下的 assets/），用于播放提示音
+          if (Test-Path "assets") {
+            Copy-Item "assets" "$env:OUT_DIR/assets" -Recurse -Force
+          }
+
+          # 许可证与三方声明（建议随包分发）
+          if (Test-Path "LICENSE") { Copy-Item "LICENSE" "$env:OUT_DIR/" }
+          if (Test-Path "third_party_notices") {
+            Copy-Item "third_party_notices" "$env:OUT_DIR/third_party_notices" -Recurse -Force
+          }
+
+          # 常见可删除项（若未使用）
+          Remove-Item "$env:OUT_DIR/opengl32sw.dll" -ErrorAction SilentlyContinue
+
+      # 基本自检
+      - name: Sanity check
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "$env:OUT_DIR/${env:EXE_NAME}")) { throw "exe missing" }
+          if (-not (Test-Path "$env:OUT_DIR/platforms/qwindows.dll")) { throw "platform plugin missing" }
+
+      # 打包 zip（命名含 tag）
+      - name: Package zip
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zip = "sandtimer-win64-$tag.zip"
+          if (Test-Path $zip) { Remove-Item $zip }
+          Compress-Archive -Path "$env:OUT_DIR\*" -DestinationPath $zip -Force
+          echo "ASSET_NAME=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # 发布 Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
