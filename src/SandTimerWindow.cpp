@@ -1,6 +1,9 @@
 #include "SandTimerWindow.h"
 #include <QFont>
 #include <QPalette>
+#include <QCoreApplication>
+#include <QGuiApplication>
+#include <QScreen>
 
 QColor SandTimerWindow::getBackgroundColor() const {
     return backgroundColor;
