@@ -25,7 +25,7 @@ jobs:
           host: 'windows'
           arch: 'win64_msvc2019_64'
           cache: true
-          modules: 'qtbase qtmultimedia'
+          modules: 'qtmultimedia'
 
       # 配置与构建（Release）
       - name: Configure (CMake)
