@@ -64,6 +64,19 @@ SandTimerWindow::SandTimerWindow(const QString& labelName, QWidget* parent)
 //         contextMenu->exec(event->globalPos());
 // }
 void SandTimerWindow::startCountdown(const QString& labelName, int seconds) {
+    // 清理旧的动画与计时器
+    if (timer && timer->isActive())
+        timer->stop();
+
+    if (bgAnimation) {
+        bgAnimation->stop();
+        bgAnimation->deleteLater();
+        bgAnimation = nullptr;
+    }
+
+    backgroundColor = QColor(255, 255, 255, 230);
+    update();
+
     remainingSeconds = seconds;
 
     // 显示时间
@@ -89,46 +102,46 @@ void SandTimerWindow::startCountdown(const QString& labelName, int seconds) {
 }
 
 void SandTimerWindow::updateCountdown() {
-    // 播放音频（只在刚好为0秒时触发一次）并使用动画颜色渐变背景
     if (remainingSeconds == 0) {
-    player->play();
+        player->play();
 
-    // 创建背景渐变动画
-    if (bgAnimation) {
-        bgAnimation->stop();
-        delete bgAnimation;
+        // 安全地重新创建动画
+        if (bgAnimation) {
+            bgAnimation->stop();
+            bgAnimation->deleteLater();
+            bgAnimation = nullptr;
+        }
+
+        bgAnimation = new QPropertyAnimation(this, "backgroundColor");
+        bgAnimation->setDuration(1500);
+        bgAnimation->setLoopCount(4);
+        bgAnimation->setStartValue(QColor(255, 255, 255, 230));
+        bgAnimation->setKeyValueAt(0.5, QColor(144, 238, 144, 255));
+        bgAnimation->setEndValue(QColor(255, 255, 255, 230));
+
+        // 不使用 DeleteWhenStopped，结束时手动回收并置空
+        connect(bgAnimation, &QPropertyAnimation::finished, this, [this]() {
+            if (bgAnimation) {
+                bgAnimation->deleteLater();
+                bgAnimation = nullptr;
+            }
+        });
+
+        bgAnimation->start();
     }
 
-    bgAnimation = new QPropertyAnimation(this, "backgroundColor");
-    bgAnimation->setDuration(1500);  // 1.5秒
-    bgAnimation->setLoopCount(4);    // 次数
-
-    bgAnimation->setStartValue(QColor(255, 255, 255, 230));         // 起始白色
-    bgAnimation->setKeyValueAt(0.5, QColor(144, 238, 144, 255));    // 中间绿色（light green）
-    bgAnimation->setEndValue(QColor(255, 255, 255, 230));           // 回到白色
-
-    bgAnimation->start(QAbstractAnimation::DeleteWhenStopped);  // 播完自动释放
-}
-
-
-    // 计算绝对时间
+    // 常规倒计时显示逻辑
     int absSeconds = std::abs(remainingSeconds);
     int minutes = absSeconds / 60;
     int seconds = absSeconds % 60;
-
-    QString timeStr = QString("%1:%2")
-        .arg(minutes, 2, 10, QChar('0'))
-        .arg(seconds, 2, 10, QChar('0'));
-
+    QString timeStr = QString("%1:%2").arg(minutes, 2, 10, QChar('0'))
+                                      .arg(seconds, 2, 10, QChar('0'));
     if (remainingSeconds < 0)
         timeStr = "-" + timeStr;
 
     timeLabel->setText(timeStr);
-
-    // 倒计时继续
     remainingSeconds--;
 }
-
 
 void SandTimerWindow::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton)
