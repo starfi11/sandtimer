@@ -12,6 +12,9 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPropertyAnimation>
+#include <QCoreApplication>
+#include <QGuiApplication>
+#include <QScreen>
 
 class SandTimerWindow : public QWidget {
     Q_OBJECT
