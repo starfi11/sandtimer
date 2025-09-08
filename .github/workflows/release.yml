@@ -20,7 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 安装 Qt 6（仅所需模块，启用缓存）
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
@@ -30,14 +29,13 @@ jobs:
           cache: true
           modules: 'qtmultimedia'
 
-      # 配置与构建（Release）
       - name: Configure (CMake)
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (CMake)
         run: cmake --build build --config Release --parallel
 
-      # 用 windeployqt 收集 Qt 运行时到 OUT_DIR
+      # 用 windeployqt 收集到 OUT_DIR
       - name: Deploy Qt runtime (windeployqt)
         shell: pwsh
         run: |
@@ -51,6 +49,8 @@ jobs:
             --multimedia `
             --dir "$env:OUT_DIR" `
             $exePath
+          # ！！把 EXE 本体拷到 OUT_DIR
+          Copy-Item $exePath "$env:OUT_DIR/"
 
       # 补充资源与许可证
       - name: Copy assets & licenses
@@ -64,6 +64,13 @@ jobs:
             Copy-Item "third_party_notices" "$env:OUT_DIR/third_party_notices" -Recurse -Force
           }
 
+      # 列出 OUT_DIR 内容（便于排查）
+      - name: List OUT_DIR
+        shell: pwsh
+        run: |
+          Write-Host "=== OUT_DIR tree ==="
+          Get-ChildItem "$env:OUT_DIR" -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+
       # 基本自检
       - name: Sanity check
         shell: pwsh
@@ -73,7 +80,6 @@ jobs:
           if (-not (Test-Path "$env:OUT_DIR/audio/qaudio_wasapi.dll")) { throw "audio plugin missing" }
           if (-not (Test-Path "$env:OUT_DIR/multimedia/ffmpegmediaplugin.dll")) { throw "multimedia plugin missing" }
 
-      # 打包 zip（命名含 tag）
       - name: Package zip
         shell: pwsh
         run: |
@@ -83,7 +89,6 @@ jobs:
           Compress-Archive -Path "$env:OUT_DIR\*" -DestinationPath $zip -Force
           echo "ASSET_NAME=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # 发布 Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
